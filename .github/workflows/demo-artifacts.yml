@@ -1,0 +1,46 @@
+name: Demo Artifacts
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  demo-artifacts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Build curated demo artifact directory
+        run: |
+          mkdir -p reports/demo/failures
+          cp reports/examples/*.json reports/demo/failures/
+          cp reports/examples/sample-ai-diagnosis.md reports/demo/ai-diagnosis.md
+
+      - name: Generate dry-run PR comment preview
+        run: python -m qa_copilot.pr_comment --input reports/demo/ai-diagnosis.md --output reports/demo/pr-comment.md
+
+      - name: Generate pytest report for docs checks
+        run: pytest tests/unit/test_docs.py -q --html=reports/demo/pytest-report.html --self-contained-html
+
+      - name: Upload demo reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-qa-reports
+          path: reports/demo/
+          retention-days: 7

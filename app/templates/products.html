@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>商品列表</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+      <span class="topbar-meta">当前用户：{{ username }}</span>
+    </header>
+    <main class="page-shell">
+      <section class="page-heading">
+        <h1>商品列表</h1>
+        <p>选择商品并创建订单，用来演示完整的端到端测试流程。</p>
+      </section>
+      <section class="panel provider-status provider-status-{{ 'ok' if provider_health.ok else 'warning' }}" aria-labelledby="provider-status-title">
+        <div class="provider-status-header">
+          <div>
+            <h2 id="provider-status-title">AI 服务状态</h2>
+            <p class="provider-status-summary">{{ provider_health.status_label }}</p>
+          </div>
+          <a class="button-link button-link-secondary" href="/products">刷新</a>
+        </div>
+        <dl class="provider-status-meta">
+          <div>
+            <dt>AI 服务</dt>
+            <dd>{{ provider_health.provider }}</dd>
+          </div>
+          <div>
+            <dt>连接状态</dt>
+            <dd>{{ provider_health.status_label }}</dd>
+          </div>
+          <div>
+            <dt>安全展示</dt>
+            <dd>隐藏内部配置</dd>
+          </div>
+        </dl>
+        {% if provider_health.issues %}
+          <ul class="provider-issues" aria-label="AI 服务配置问题">
+            {% for issue in provider_health.issues %}
+              <li>
+                <strong>{{ issue.label }}</strong>
+                <span>{{ issue.hint }}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </section>
+      {% if error %}
+        <p role="alert" class="alert">{{ error }}</p>
+      {% endif %}
+      <section class="product-grid" aria-label="商品目录">
+        {% for product in products %}
+          <article class="product-card">
+            <h2>{{ product.name }}</h2>
+            <dl class="product-meta">
+              <div>
+                <dt>价格</dt>
+                <dd>{{ product.price_cents }} 分</dd>
+              </div>
+              <div>
+                <dt>库存</dt>
+                <dd>{{ product.stock }}</dd>
+              </div>
+            </dl>
+            <form method="post" action="/orders">
+              <input type="hidden" name="product_id" value="{{ product.id }}">
+              <label>
+                数量
+                <input name="quantity" type="number" value="1" min="1">
+              </label>
+              <button type="submit">创建订单</button>
+            </form>
+          </article>
+        {% endfor %}
+      </section>
+    </main>
+  </body>
+</html>

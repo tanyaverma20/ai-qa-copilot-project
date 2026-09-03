@@ -1,0 +1,8 @@
+{
+  "nodeid": "tests/api/test_orders_api.py::test_create_order_rejects_insufficient_stock",
+  "failed_at": "2026-07-02T10:00:00+00:00",
+  "phase": "call",
+  "duration_seconds": 0.13,
+  "longrepr": "AssertionError: expected status code 409 but got 500",
+  "keywords": ["api", "orders", "negative-case"]
+}

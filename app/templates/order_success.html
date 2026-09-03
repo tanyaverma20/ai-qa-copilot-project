@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>订单创建成功</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+      <span class="topbar-meta">当前用户：{{ username }}</span>
+    </header>
+    <main class="page-shell">
+      <section class="panel result-panel result-panel-wide">
+        <div class="result-header">
+          <div>
+            <h1>订单创建成功</h1>
+            <p>{{ username }} 已购买 {{ order.quantity }} 件 {{ order.product_name }}。</p>
+          </div>
+          <p class="result-status">状态：<strong>{{ '已创建' if order.status == 'created' else order.status }}</strong></p>
+        </div>
+
+        <div class="result-explainer">
+          <h2>下单成功不是终点</h2>
+          <p>
+            这一步证明 Demo Shop 是真实被测系统：登录、商品、库存和订单链路都能被
+            Playwright E2E 覆盖。面试时可以先演示这个正常路径，再解释如果这里失败，
+            项目会把失败证据整理成结构化材料、AI 诊断和 PR 摘要预览。
+          </p>
+        </div>
+
+        <section class="result-next" aria-labelledby="result-next-title">
+          <h2 id="result-next-title">接下来可以看什么</h2>
+          <div class="result-next-grid">
+            <article>
+              <h3>1. 返回 Dashboard</h3>
+              <p>回到平台视角，讲清测试失败证据链、Failure Mode Matrix 和报告产物边界。</p>
+            </article>
+            <article>
+              <h3>2. 看测试报告</h3>
+              <p>测试报告展示 pytest / Playwright 的执行结果，用来证明自动化测试真实跑过。</p>
+            </article>
+            <article>
+              <h3>3. 看 AI 诊断示例</h3>
+              <p>AI 诊断示例展示候选根因、诊断假设和下一步建议。</p>
+            </article>
+          </div>
+        </section>
+
+        <div class="result-actions">
+          <a class="button-link" href="/">返回 Dashboard</a>
+          <a class="button-link button-link-secondary" href="/products">继续测试下单</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

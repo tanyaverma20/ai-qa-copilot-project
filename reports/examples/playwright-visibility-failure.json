@@ -1,0 +1,8 @@
+{
+  "nodeid": "tests/e2e/test_checkout_flow.py::test_checkout_button_enables_payment",
+  "failed_at": "2026-07-02T10:01:00+00:00",
+  "phase": "call",
+  "duration_seconds": 5.01,
+  "longrepr": "AssertionError: expect(locator).to_be_visible() failed\nLocator: get_by_role(\"button\", name=\"Pay now\")\nExpected: visible\nReceived: hidden\nScreenshot: reports/latest/failures/test_checkout_button_enables_payment.png\nTrace: reports/latest/failures/test_checkout_button_enables_payment.zip\nPage URL: /checkout",
+  "keywords": ["e2e", "playwright", "visibility", "checkout"]
+}

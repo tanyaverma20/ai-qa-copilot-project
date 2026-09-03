@@ -1,0 +1,8 @@
+{
+  "nodeid": "tests/api/test_orders_api.py::test_create_order_contract",
+  "failed_at": "2026-07-02T10:02:00+00:00",
+  "phase": "call",
+  "duration_seconds": 0.18,
+  "longrepr": "AssertionError: expected status code 201 but got 422\nRequest: POST /api/orders {\"product_id\": 1, \"quantity\": 1}\nResponse body: {\"detail\": [{\"loc\": [\"body\", \"quantity\"], \"msg\": \"Field required\"}]}\nExpected contract: order id, username, product_id, product_name, quantity, status",
+  "keywords": ["api", "api-assertion", "orders", "contract"]
+}

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 自动化测试与缺陷诊断平台</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/" aria-current="page">Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="dashboard-hero" aria-labelledby="dashboard-title">
+        <div class="dashboard-hero-copy">
+          <h1 id="dashboard-title">AI 自动化测试与缺陷诊断平台</h1>
+          <p>
+            把 pytest / Playwright 测试失败转成失败证据、AI 诊断、
+            Failure Mode Matrix 和 CI 报告产物，让自动化测试结果更容易审阅和复盘。
+          </p>
+          <div class="hero-actions">
+            <a class="button-link" href="/login">进入 Demo Shop</a>
+            <a class="button-link button-link-secondary" href="#demo-path-title">查看演示路径</a>
+          </div>
+        </div>
+        <aside class="hero-summary" aria-label="项目实时概览">
+          <div>
+            <span>被测商品</span>
+            <strong>{{ product_count }}</strong>
+          </div>
+          <div>
+            <span>示例失败证据</span>
+            <strong>{{ sample_artifact_count }}</strong>
+          </div>
+          <div>
+            <span>支持 AI 服务</span>
+            <strong>{{ provider_count }}</strong>
+          </div>
+        </aside>
+      </section>
+
+      <section class="dashboard-section demo-path-panel" aria-labelledby="demo-path-title">
+        <div class="section-heading">
+          <h2 id="demo-path-title">面试演示路径</h2>
+          <p>先看 Dashboard 理解平台能力，再进入被测业务系统，最后回到报告和诊断产物。</p>
+        </div>
+        <ol class="demo-path-steps">
+          <li>
+            <strong>先看 Dashboard</strong>
+            <span>用 30 秒说明自动化测试、失败证据链、AI 诊断和 CI 报告产物。</span>
+          </li>
+          <li>
+            <strong>进入 Demo Shop 下单</strong>
+            <span>下单流程只是被测业务场景，用来验证登录、商品、库存和订单链路。</span>
+          </li>
+          <li>
+            <strong>再看 CI 报告包</strong>
+            <span>如果测试失败，CI 会保留测试报告、失败证据、AI 诊断和 PR 摘要预览。</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="value-title">
+        <div class="section-heading">
+          <h2 id="value-title">30 秒看懂项目价值</h2>
+          <p>不是普通电商 Demo，而是一条从自动化测试失败到团队 review 摘要的 QA 工程闭环。</p>
+        </div>
+        <div class="value-grid">
+          {% for card in value_cards %}
+            <article class="value-card">
+              <h3>{{ card.title }}</h3>
+              <p>{{ card.body }}</p>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="dashboard-section pipeline-panel" aria-labelledby="pipeline-title">
+        <div class="section-heading">
+          <h2 id="pipeline-title">测试失败证据链</h2>
+          <p>把测试结果沉淀成结构化证据，再进入 AI 辅助诊断和 PR 摘要预览。</p>
+        </div>
+        <ol class="pipeline-steps">
+          {% for step in pipeline_steps %}
+            <li>
+              <span>{{ loop.index }}</span>
+              <strong>{{ step }}</strong>
+            </li>
+          {% endfor %}
+        </ol>
+      </section>
+
+      <section class="dashboard-section matrix-panel" aria-labelledby="matrix-title">
+        <div class="section-heading">
+          <h2 id="matrix-title">Failure Mode Matrix 示例</h2>
+          <p>以下是安全演示样例，用于稳定展示诊断结构，不代表当前真实故障。</p>
+        </div>
+        <div class="matrix-scroll">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th>Failure Mode</th>
+                <th>示例</th>
+                <th>证据</th>
+                <th>诊断输出</th>
+                <th>下一步</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in failure_mode_rows %}
+                <tr>
+                  <td>{{ row.mode }}</td>
+                  <td>{{ row.example }}</td>
+                  <td>{{ row.evidence }}</td>
+                  <td>候选根因 / 诊断假设</td>
+                  <td>{{ row.next_action }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="dashboard-two-column">
+        <section class="panel provider-status provider-status-{{ 'ok' if provider_health.ok else 'warning' }}" aria-labelledby="dashboard-provider-title">
+          <div class="provider-status-header">
+            <div>
+              <h2 id="dashboard-provider-title">AI 服务状态</h2>
+              <p class="provider-status-summary">{{ provider_health.status_label }}</p>
+            </div>
+            <a class="button-link button-link-secondary" href="/">刷新</a>
+          </div>
+          <dl class="provider-status-meta">
+            <div>
+              <dt>AI 服务</dt>
+              <dd>{{ provider_health.provider }}</dd>
+            </div>
+            <div>
+              <dt>连接状态</dt>
+              <dd>{{ provider_health.status_label }}</dd>
+            </div>
+            <div>
+              <dt>安全展示</dt>
+              <dd>隐藏内部配置</dd>
+            </div>
+          </dl>
+          {% if provider_health.issues %}
+            <ul class="provider-issues" aria-label="AI 服务配置问题">
+              {% for issue in provider_health.issues %}
+                <li>
+                  <strong>{{ issue.label }}</strong>
+                  <span>{{ issue.hint }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          <p class="boundary-note">
+            AI 服务状态只展示连接是否可用，不展示密钥或内部配置。
+          </p>
+        </section>
+
+        <section class="panel provider-list" aria-labelledby="provider-list-title">
+          <h2 id="provider-list-title">AI 服务适配范围</h2>
+          <p>当前支持 {{ provider_count }} 种 AI 服务配置，Dashboard 只展示服务名称，不展示运行时密钥来源。</p>
+          <ul>
+            {% for provider in provider_names %}
+              <li>{{ provider }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="artifact-title">
+        <div class="section-heading">
+          <h2 id="artifact-title">报告产物</h2>
+          <p>CI 会保留测试报告、AI 诊断报告和 PR 摘要预览，方便面试时说明完整证据链。</p>
+        </div>
+        <div class="artifact-grid">
+          {% for artifact in artifact_cards %}
+            <article class="artifact-card">
+              <h3>{{ artifact.title }}</h3>
+              <strong>{{ artifact.kind }}</strong>
+              <p>{{ artifact.body }}</p>
+            </article>
+          {% endfor %}
+        </div>
+        <p class="boundary-note">
+          真实企业日志公开前需要人工检查；面试页面只展示安全摘要。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

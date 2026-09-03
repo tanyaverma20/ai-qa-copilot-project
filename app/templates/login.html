@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI QA 演示商店</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/login" aria-current="page">Demo Shop</a>
+      </nav>
+      <span class="topbar-meta">被测演示商店</span>
+    </header>
+    <main class="auth-layout">
+      <section class="auth-copy" aria-labelledby="page-title">
+        <h1 id="page-title">AI QA 演示商店</h1>
+        <p>
+          一个用于展示 API 自动化、浏览器端到端测试、CI 报告和 AI 辅助缺陷诊断的
+          FastAPI 小型商店。
+        </p>
+      </section>
+      <section class="panel auth-panel" aria-label="登录表单">
+        <form method="post" action="/login">
+          <label>
+            用户名
+            <input name="username" value="alice" autocomplete="username">
+          </label>
+          <label>
+            密码
+            <input name="password" type="password" value="password123" autocomplete="current-password">
+          </label>
+          <button type="submit">登录</button>
+        </form>
+        {% if error %}
+          <p role="alert" class="alert">{{ error }}</p>
+        {% endif %}
+      </section>
+    </main>
+  </body>
+</html>

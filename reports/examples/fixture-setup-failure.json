@@ -1,0 +1,8 @@
+{
+  "nodeid": "tests/conftest.py::db_seed_fixture",
+  "failed_at": "2026-07-02T10:04:00+00:00",
+  "phase": "setup",
+  "duration_seconds": 0.05,
+  "longrepr": "sqlite3.OperationalError: no such table: products\nFixture: db_seed_fixture\nSetup step: seed demo products before API tests\nLikely boundary: database initialization did not run before seed_database()",
+  "keywords": ["fixture", "setup", "database", "sqlite"]
+}

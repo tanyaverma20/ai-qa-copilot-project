@@ -1,0 +1,8 @@
+{
+  "nodeid": "tests/e2e/test_product_search.py::test_search_filters_results",
+  "failed_at": "2026-07-02T10:03:00+00:00",
+  "phase": "call",
+  "duration_seconds": 3.2,
+  "longrepr": "Flaky test summary: passed 7 times and failed 3 times over the last 10 CI runs\nFailure: expect(page.get_by_role(\"article\")).to_have_count(1) timed out after 5000ms\nObserved counts: run 3 saw 3 products, run 8 saw 0 products\nPossible timing signal: search debounce and product fetch race each other",
+  "keywords": ["e2e", "playwright", "flaky", "search"]
+}
