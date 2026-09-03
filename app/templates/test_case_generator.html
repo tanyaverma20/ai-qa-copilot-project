@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 测试用例生成器 - AI QA Copilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/test-case-generator" aria-current="page">Test Case Generator</a>
+        <a href="/traceability">Traceability</a>
+        <a href="/qa-dashboard">QA Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="dashboard-hero" aria-labelledby="tc-generator-title">
+        <div class="dashboard-hero-copy">
+          <h1 id="tc-generator-title">AI 辅助测试用例生成器</h1>
+          <p>
+            输入软件需求描述或 User Story，基于多模型 AI 服务自动生成结构化 QA 测试用例，
+            包含 Functional、Negative、Boundary 及 Regression 场景。
+          </p>
+        </div>
+      </section>
+
+      <section class="dashboard-section">
+        <div class="panel">
+          <h2>输入需求描述</h2>
+          <form id="tc-form" onsubmit="event.preventDefault(); generateTestCases();">
+            <div style="margin-bottom: 1rem;">
+              <label for="req-id" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">需求 / 任务 ID (可选)</label>
+              <input type="text" id="req-id" placeholder="例如：REQ-2026-001" style="width: 100%; max-width: 300px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+              <label for="user-story" style="display: block; font-weight: 600; margin-bottom: 0.5rem;">User Story / 软件需求 *</label>
+              <textarea id="user-story" rows="6" placeholder="例如：作为已登录客户，我在商品列表页面点击'加入购物车'时，系统应校验商品库存。若库存大于0，商品加入购物车并扣减库存；若库存不足，应提示'库存不足，无法购买'。" required style="width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 0.95rem;"></textarea>
+            </div>
+            <button type="submit" id="btn-submit" class="button-link">生成结构化测试用例</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="dashboard-section" id="results-section" style="display: none;">
+        <div class="section-heading" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <h2>生成测试用例结果</h2>
+            <p id="tc-summary-count"></p>
+          </div>
+          <div id="save-traceability-panel" style="display: none;">
+            <button type="button" id="btn-save-traceability" onclick="saveToTraceability()" class="button-link" style="background: #2b6cb0;">
+              保存至 Traceability 追溯矩阵
+            </button>
+          </div>
+        </div>
+        <div id="save-status-banner" style="display: none; margin-bottom: 1.5rem; padding: 1rem; border-radius: 4px;"></div>
+        <div id="error-banner" class="provider-issues" style="display: none; margin-bottom: 1.5rem; border-left: 4px solid #e53e3e; background: #fff5f5; padding: 1rem; border-radius: 4px;">
+          <strong id="error-message" style="color: #c53030;"></strong>
+        </div>
+        <div id="tc-cards-container" class="value-grid"></div>
+      </section>
+    </main>
+
+    <script>
+      let currentGeneratedData = null;
+
+      async function generateTestCases() {
+        const userStory = document.getElementById('user-story').value.trim();
+        const reqId = document.getElementById('req-id').value.trim() || 'REQ-001';
+        const submitBtn = document.getElementById('btn-submit');
+        const resultsSection = document.getElementById('results-section');
+        const errorBanner = document.getElementById('error-banner');
+        const errorMessage = document.getElementById('error-message');
+        const cardsContainer = document.getElementById('tc-cards-container');
+        const summaryCount = document.getElementById('tc-summary-count');
+        const saveTraceabilityPanel = document.getElementById('save-traceability-panel');
+        const saveStatusBanner = document.getElementById('save-status-banner');
+
+        if (!userStory) {
+          alert('请输入 User Story 或需求描述。');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'AI 正在生成测试用例...';
+        resultsSection.style.display = 'block';
+        errorBanner.style.display = 'none';
+        saveStatusBanner.style.display = 'none';
+        saveTraceabilityPanel.style.display = 'none';
+        cardsContainer.innerHTML = '';
+        summaryCount.textContent = '正在调用 AI 服务分析需求...';
+        currentGeneratedData = null;
+
+        try {
+          const resp = await fetch('/api/generate-test-cases', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_story: userStory, requirement_id: reqId })
+          });
+
+          const data = await resp.json();
+
+          if (!resp.ok || !data.ok) {
+            errorBanner.style.display = 'block';
+            errorMessage.textContent = data.error || data.detail || '生成用例失败，请检查 AI 服务配置。';
+            summaryCount.textContent = '生成过程遇到异常';
+            return;
+          }
+
+          currentGeneratedData = {
+            requirement_id: data.requirement_id,
+            user_story: userStory,
+            test_cases: data.test_cases
+          };
+
+          summaryCount.textContent = `共生成 ${data.test_cases.length} 条测试用例 (需求 ID: ${data.requirement_id})`;
+          saveTraceabilityPanel.style.display = 'block';
+
+          data.test_cases.forEach(tc => {
+            const card = document.createElement('article');
+            card.className = 'value-card';
+            card.style.borderTop = '3px solid #3182ce';
+
+            const typeBadgeColor = tc.test_type === 'Negative' ? '#e53e3e' : (tc.test_type === 'Boundary' ? '#dd6b20' : '#3182ce');
+            const prioBadgeColor = tc.priority === 'High' ? '#c53030' : (tc.priority === 'Medium' ? '#d69e2e' : '#38a169');
+
+            const preconditionsHtml = (tc.preconditions && tc.preconditions.length > 0)
+              ? `<ul>${tc.preconditions.map(p => `<li>${p}</li>`).join('')}</ul>`
+              : '<em>无前置条件</em>';
+
+            const stepsHtml = (tc.test_steps && tc.test_steps.length > 0)
+              ? `<ol>${tc.test_steps.map(s => `<li>${s}</li>`).join('')}</ol>`
+              : '<em>无操作步骤</em>';
+
+            card.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <span style="font-weight: 700; color: #2b6cb0;">${tc.test_case_id}</span>
+                <div>
+                  <span style="background: ${typeBadgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-right: 4px;">${tc.test_type}</span>
+                  <span style="background: ${prioBadgeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${tc.priority}</span>
+                </div>
+              </div>
+              <h3 style="margin-bottom: 0.75rem; font-size: 1.1rem;">${tc.scenario}</h3>
+              <p style="font-size: 0.85rem; color: #4a5568; margin-bottom: 0.5rem;"><strong>前置条件:</strong></p>
+              <div style="font-size: 0.85rem; margin-bottom: 0.75rem;">${preconditionsHtml}</div>
+              <p style="font-size: 0.85rem; color: #4a5568; margin-bottom: 0.5rem;"><strong>测试步骤:</strong></p>
+              <div style="font-size: 0.85rem; margin-bottom: 0.75rem;">${stepsHtml}</div>
+              <p style="font-size: 0.85rem; color: #4a5568;"><strong>预期结果:</strong> ${tc.expected_result}</p>
+            `;
+            cardsContainer.appendChild(card);
+          });
+        } catch (err) {
+          errorBanner.style.display = 'block';
+          errorMessage.textContent = '网络请求失败: ' + err.message;
+          summaryCount.textContent = '请求失败';
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '生成结构化测试用例';
+        }
+      }
+
+      async function saveToTraceability() {
+        if (!currentGeneratedData) return;
+        const saveBtn = document.getElementById('btn-save-traceability');
+        const saveStatusBanner = document.getElementById('save-status-banner');
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = '正在保存至追溯矩阵...';
+
+        try {
+          const resp = await fetch('/api/traceability', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentGeneratedData)
+          });
+
+          const resData = await resp.json();
+          saveStatusBanner.style.display = 'block';
+
+          if (!resp.ok) {
+            saveStatusBanner.style.background = '#fff5f5';
+            saveStatusBanner.style.borderLeft = '4px solid #e53e3e';
+            saveStatusBanner.innerHTML = `<strong style="color: #c53030;">保存失败: ${resData.detail || resData.error || '未知错误'}</strong>`;
+            return;
+          }
+
+          saveStatusBanner.style.background = '#f0fff4';
+          saveStatusBanner.style.borderLeft = '4px solid #38a169';
+          saveStatusBanner.innerHTML = `
+            <strong style="color: #276749;">成功保存 ${resData.test_cases.length} 条测试用例至追溯矩阵！</strong>
+            <a href="/traceability" class="button-link button-link-secondary" style="margin-left: 1rem; font-size: 0.85rem; padding: 0.25rem 0.75rem;">前往查看 Traceability 追溯矩阵</a>
+          `;
+        } catch (err) {
+          saveStatusBanner.style.display = 'block';
+          saveStatusBanner.style.background = '#fff5f5';
+          saveStatusBanner.style.borderLeft = '4px solid #e53e3e';
+          saveStatusBanner.innerHTML = `<strong style="color: #c53030;">网络请求错误: ${err.message}</strong>`;
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '保存至 Traceability 追溯矩阵';
+        }
+      }
+    </script>
+  </body>
+</html>

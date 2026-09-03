@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>回归测试与 QA 看板 (QA Dashboard) - AI QA Copilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/test-case-generator">Test Case Generator</a>
+        <a href="/traceability">Traceability</a>
+        <a href="/qa-dashboard" aria-current="page">QA Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="dashboard-hero" aria-labelledby="qa-dashboard-title">
+        <div class="dashboard-hero-copy">
+          <h1 id="qa-dashboard-title">回归测试与 QA 综合看板 (QA Dashboard)</h1>
+          <p>
+            汇总已有软件需求追溯与测试执行真实数据，提供全局 Passing Rate 率计算、缺陷暴露视图及 Regression 回归用例筛选。
+          </p>
+        </div>
+        <aside class="hero-summary" aria-label="QA Dashboard 核心指标">
+          <div>
+            <span>总体通过率 (Pass Rate)</span>
+            <strong id="stat-pass-rate" style="font-size: 1.8rem; color: #2b6cb0;">{{ summary.pass_rate }}%</strong>
+            <small style="display: block; font-size: 0.75rem; color: #718096; margin-top: 2px;">已执行用例通过占比</small>
+          </div>
+          <div>
+            <span>需求总数</span>
+            <strong>{{ summary.total_requirements }}</strong>
+          </div>
+          <div>
+            <span>用例总数</span>
+            <strong>{{ summary.total_test_cases }}</strong>
+          </div>
+          <div>
+            <span>回归用例 (Regression)</span>
+            <strong style="color: #dd6b20;">{{ summary.regression_count }}</strong>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Global Summary Cards -->
+      <section class="dashboard-section">
+        <div class="section-heading">
+          <h2>全局 QA 执行指标概览</h2>
+          <p>基于数据库全局追溯数据统计（不受下方列表筛选影响）：</p>
+        </div>
+        <div class="value-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); text-align: center;">
+          <div class="panel">
+            <span style="font-size: 0.85rem; color: #718096;">已执行用例</span>
+            <div style="font-size: 1.4rem; font-weight: 700; margin-top: 4px;">{{ summary.executed_test_cases }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #38a169;">
+            <span style="font-size: 0.85rem; color: #718096;">通过 (Passed)</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #38a169; margin-top: 4px;">{{ summary.passed }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #e53e3e;">
+            <span style="font-size: 0.85rem; color: #718096;">失败 (Failed)</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #e53e3e; margin-top: 4px;">{{ summary.failed }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #dd6b20;">
+            <span style="font-size: 0.85rem; color: #718096;">阻塞 (Blocked)</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #dd6b20; margin-top: 4px;">{{ summary.blocked }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #3182ce;">
+            <span style="font-size: 0.85rem; color: #718096;">重测 (Retest)</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #3182ce; margin-top: 4px;">{{ summary.retest }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #cbd5e0;">
+            <span style="font-size: 0.85rem; color: #718096;">未执行 (Not Run)</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #718096; margin-top: 4px;">{{ summary.not_run }}</div>
+          </div>
+          <div class="panel" style="border-top: 3px solid #9f7aea;">
+            <span style="font-size: 0.85rem; color: #718096;">关联缺陷数</span>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #805ad5; margin-top: 4px;">{{ summary.defect_count }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Defect Visibility Section -->
+      <section class="dashboard-section">
+        <div class="section-heading">
+          <h2>缺陷与异常暴露视图 (Defect Visibility)</h2>
+          <p>展示所有状态为 Failed / Blocked / Retest 或包含缺陷编号 (Defect Reference) 的测试用例：</p>
+        </div>
+        <div class="panel">
+          {% if not defect_cases %}
+            <p style="color: #718096; text-align: center; margin: 1rem 0;">当前暂无失败、阻塞或带有缺陷标记的测试用例。</p>
+          {% else %}
+            <div class="matrix-scroll">
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th>需求 ID</th>
+                    <th>用例 ID</th>
+                    <th>测试场景</th>
+                    <th>当前状态</th>
+                    <th>缺陷/Issue 编号</th>
+                    <th>实际结果</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for tc in defect_cases %}
+                    <tr>
+                      <td><span style="background: #ebf8ff; color: #2b6cb0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ tc.requirement_id }}</span></td>
+                      <td><strong>{{ tc.test_case_id }}</strong></td>
+                      <td>{{ tc.scenario }}</td>
+                      <td>
+                        {% if tc.execution_status == 'Failed' %}
+                          <span style="background: #fff5f5; color: #e53e3e; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Failed</span>
+                        {% elif tc.execution_status == 'Blocked' %}
+                          <span style="background: #fffaf0; color: #dd6b20; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Blocked</span>
+                        {% elif tc.execution_status == 'Retest' %}
+                          <span style="background: #ebf8ff; color: #3182ce; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Retest</span>
+                        {% else %}
+                          <span style="background: #edf2f7; color: #4a5568; padding: 2px 8px; border-radius: 4px;">{{ tc.execution_status }}</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if tc.defect_reference %}
+                          <strong style="color: #c53030; background: #fff5f5; padding: 2px 6px; border-radius: 4px;">{{ tc.defect_reference }}</strong>
+                        {% else %}
+                          <em style="color: #a0aec0;">未填</em>
+                        {% endif %}
+                      </td>
+                      <td style="font-size: 0.85rem; color: #4a5568;">{{ tc.actual_result or '—' }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Regression View & Test Cases Filter -->
+      <section class="dashboard-section">
+        <div class="section-heading">
+          <h2>回归测试用例明细 (Regression View & Filter)</h2>
+          <p>多维条件筛选用例明细，突出标识 Regression 回归场景：</p>
+        </div>
+
+        <div class="panel" style="margin-bottom: 1.5rem;">
+          <form method="GET" action="/qa-dashboard" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div>
+              <label for="status" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">执行状态</label>
+              <select name="status" id="status" style="padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.9rem;">
+                <option value="">全部状态</option>
+                <option value="Not Run" {% if active_status == 'Not Run' %}selected{% endif %}>Not Run</option>
+                <option value="Passed" {% if active_status == 'Passed' %}selected{% endif %}>Passed</option>
+                <option value="Failed" {% if active_status == 'Failed' %}selected{% endif %}>Failed</option>
+                <option value="Blocked" {% if active_status == 'Blocked' %}selected{% endif %}>Blocked</option>
+                <option value="Retest" {% if active_status == 'Retest' %}selected{% endif %}>Retest</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="priority" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">优先级</label>
+              <select name="priority" id="priority" style="padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.9rem;">
+                <option value="">全部优先级</option>
+                <option value="High" {% if active_priority == 'High' %}selected{% endif %}>High</option>
+                <option value="Medium" {% if active_priority == 'Medium' %}selected{% endif %}>Medium</option>
+                <option value="Low" {% if active_priority == 'Low' %}selected{% endif %}>Low</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="test_type" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">测试类型</label>
+              <select name="test_type" id="test_type" style="padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.9rem;">
+                <option value="">全部类型</option>
+                <option value="Regression" {% if active_test_type == 'Regression' %}selected{% endif %}>Regression (回归)</option>
+                <option value="Functional" {% if active_test_type == 'Functional' %}selected{% endif %}>Functional</option>
+                <option value="Negative" {% if active_test_type == 'Negative' %}selected{% endif %}>Negative</option>
+                <option value="Boundary" {% if active_test_type == 'Boundary' %}selected{% endif %}>Boundary</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="requirement_id" style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">需求 ID</label>
+              <input type="text" name="requirement_id" id="requirement_id" value="{{ active_requirement_id }}" placeholder="如 REQ-001" style="padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.9rem;">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem;">
+              <button type="submit" class="button-link" style="padding: 0.4rem 1rem;">筛选</button>
+              <a href="/qa-dashboard" class="button-link button-link-secondary" style="padding: 0.4rem 1rem; text-decoration: none;">重置</a>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          {% if not test_cases %}
+            <p style="color: #718096; text-align: center; margin: 1.5rem 0;">没有匹配当前筛选条件的测试用例。</p>
+          {% else %}
+            <div class="matrix-scroll">
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th>用例 ID</th>
+                    <th>需求 ID</th>
+                    <th>测试场景</th>
+                    <th>类型 / 优先级</th>
+                    <th>执行状态</th>
+                    <th>缺陷 Reference</th>
+                    <th>实际结果</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for tc in test_cases %}
+                    <tr>
+                      <td>
+                        <strong>{{ tc.test_case_id }}</strong>
+                        {% if tc.test_type == 'Regression' %}
+                          <span style="display: block; font-size: 0.7rem; background: #c53030; color: white; padding: 1px 5px; border-radius: 3px; margin-top: 2px; text-align: center; font-weight: 700;">REGRESSION</span>
+                        {% endif %}
+                      </td>
+                      <td><span style="background: #ebf8ff; color: #2b6cb0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ tc.requirement_id }}</span></td>
+                      <td>
+                        <div><strong>{{ tc.scenario }}</strong></div>
+                        <div style="font-size: 0.8rem; color: #718096; margin-top: 2px;">预期: {{ tc.expected_result }}</div>
+                      </td>
+                      <td>
+                        <div style="font-size: 0.8rem;"><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">{{ tc.test_type }}</span></div>
+                        <div style="font-size: 0.8rem; margin-top: 2px;"><span style="background: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px;">{{ tc.priority }}</span></div>
+                      </td>
+                      <td>
+                        {% if tc.execution_status == 'Passed' %}
+                          <span style="background: #f0fff4; color: #276749; padding: 3px 8px; border-radius: 4px; font-weight: 600;">Passed</span>
+                        {% elif tc.execution_status == 'Failed' %}
+                          <span style="background: #fff5f5; color: #c53030; padding: 3px 8px; border-radius: 4px; font-weight: 600;">Failed</span>
+                        {% elif tc.execution_status == 'Blocked' %}
+                          <span style="background: #fffaf0; color: #dd6b20; padding: 3px 8px; border-radius: 4px; font-weight: 600;">Blocked</span>
+                        {% elif tc.execution_status == 'Retest' %}
+                          <span style="background: #ebf8ff; color: #2b6cb0; padding: 3px 8px; border-radius: 4px; font-weight: 600;">Retest</span>
+                        {% else %}
+                          <span style="background: #edf2f7; color: #4a5568; padding: 3px 8px; border-radius: 4px;">Not Run</span>
+                        {% endif %}
+                      </td>
+                      <td>
+                        {% if tc.defect_reference %}
+                          <strong style="color: #c53030; background: #fff5f5; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;">{{ tc.defect_reference }}</strong>
+                        {% else %}
+                          <span style="color: #a0aec0;">—</span>
+                        {% endif %}
+                      </td>
+                      <td style="font-size: 0.85rem; color: #4a5568;">{{ tc.actual_result or '—' }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

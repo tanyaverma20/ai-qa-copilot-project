@@ -12,12 +12,21 @@ from fastapi.templating import Jinja2Templates
 
 from app.db import connect, initialize_database, seed_database
 from app.schemas import (
+    CreateTraceabilityRecordRequest,
     DiagnosisRequest,
     DiagnosisResponse,
+    GenerateTestCasesRequest,
+    GenerateTestCasesResponse,
     LoginRequest,
     LoginResponse,
     OrderRequest,
     ProviderHealthResponse,
+    QADashboardResponse,
+    TestCaseSchema,
+    TraceabilityRequirementSchema,
+    TraceabilitySummarySchema,
+    TraceabilityTestCaseSchema,
+    UpdateTraceabilityTestCaseRequest,
 )
 from app.services import (
     AuthenticationError,
@@ -35,6 +44,17 @@ from qa_copilot.diagnosis import diagnose_with_ai
 from qa_copilot.prompt_builder import build_diagnosis_prompt
 from qa_copilot.provider_health import check_provider_health
 from qa_copilot.providers import supported_provider_specs
+from qa_copilot.qa_dashboard import get_qa_dashboard_data
+from qa_copilot.test_case_generator import generate_test_cases
+from qa_copilot.traceability import (
+    TraceabilityNotFoundError,
+    TraceabilityValidationError,
+    get_traceability_record,
+    get_traceability_summary,
+    list_traceability_records,
+    save_traceability_record,
+    update_traceability_test_case,
+)
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -286,6 +306,165 @@ def create_app(db_path: str | Path | None = None) -> FastAPI:
         prompt = build_diagnosis_prompt([artifact])
         report = diagnose_with_ai(prompt)
         return DiagnosisResponse(artifact_count=1, report_markdown=report)
+
+    @api.post("/api/generate-test-cases", response_model=GenerateTestCasesResponse)
+    def generate_test_cases_endpoint(
+        payload: GenerateTestCasesRequest,
+    ) -> GenerateTestCasesResponse:
+        if not payload.user_story or not payload.user_story.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Requirement / User Story text cannot be empty.",
+            )
+        result = generate_test_cases(
+            user_story=payload.user_story,
+            requirement_id=payload.requirement_id,
+        )
+        tc_schemas = [TestCaseSchema(**tc.to_dict()) for tc in result.test_cases]
+        return GenerateTestCasesResponse(
+            ok=result.ok,
+            requirement_id=result.requirement_id,
+            test_cases=tc_schemas,
+            error=result.error,
+        )
+
+    @api.get("/test-case-generator", response_class=HTMLResponse)
+    def test_case_generator_page(request: Request) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request,
+            "test_case_generator.html",
+            {"provider_health": _provider_health_view_model()},
+        )
+
+    @api.post("/api/traceability", response_model=TraceabilityRequirementSchema, status_code=201)
+    def create_traceability_record_endpoint(
+        payload: CreateTraceabilityRecordRequest,
+        db: DbConnection,
+    ) -> TraceabilityRequirementSchema:
+        try:
+            tc_dicts = [tc.model_dump() for tc in payload.test_cases]
+            record = save_traceability_record(
+                db,
+                requirement_id=payload.requirement_id,
+                user_story=payload.user_story,
+                test_cases=tc_dicts,
+            )
+            return TraceabilityRequirementSchema(**record)
+        except TraceabilityValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @api.get("/api/traceability")
+    def list_traceability_records_endpoint(
+        db: DbConnection,
+    ) -> dict[str, object]:
+        records = list_traceability_records(db)
+        summary = get_traceability_summary(db)
+        return {
+            "records": [TraceabilityRequirementSchema(**r).model_dump() for r in records],
+            "summary": TraceabilitySummarySchema(**summary).model_dump(),
+        }
+
+    @api.get("/api/traceability/{requirement_id}", response_model=TraceabilityRequirementSchema)
+    def get_traceability_record_endpoint(
+        requirement_id: str,
+        db: DbConnection,
+    ) -> TraceabilityRequirementSchema:
+        try:
+            record = get_traceability_record(db, requirement_id)
+            return TraceabilityRequirementSchema(**record)
+        except TraceabilityNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @api.patch(
+        "/api/traceability/{requirement_id}/test-cases/{test_case_id}",
+        response_model=TraceabilityTestCaseSchema,
+    )
+    def update_traceability_test_case_endpoint(
+        requirement_id: str,
+        test_case_id: str,
+        payload: UpdateTraceabilityTestCaseRequest,
+        db: DbConnection,
+    ) -> TraceabilityTestCaseSchema:
+        try:
+            updated_tc = update_traceability_test_case(
+                db,
+                requirement_id=requirement_id,
+                test_case_id=test_case_id,
+                execution_status=payload.execution_status,
+                actual_result=payload.actual_result,
+                defect_reference=payload.defect_reference,
+            )
+            return TraceabilityTestCaseSchema(**updated_tc)
+        except TraceabilityNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except TraceabilityValidationError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @api.get("/traceability", response_class=HTMLResponse)
+    def traceability_page(request: Request, db: DbConnection) -> HTMLResponse:
+        records = list_traceability_records(db)
+        summary = get_traceability_summary(db)
+        return templates.TemplateResponse(
+            request,
+            "traceability.html",
+            {
+                "records": records,
+                "summary": summary,
+                "provider_health": _provider_health_view_model(),
+            },
+        )
+
+    @api.get("/api/qa-dashboard", response_model=QADashboardResponse)
+    def qa_dashboard_api(
+        db: DbConnection,
+        status: str | None = None,
+        priority: str | None = None,
+        test_type: str | None = None,
+        requirement_id: str | None = None,
+    ) -> QADashboardResponse:
+        data = get_qa_dashboard_data(
+            db,
+            status=status,
+            priority=priority,
+            test_type=test_type,
+            requirement_id=requirement_id,
+        )
+        return QADashboardResponse(**data)
+
+    @api.get("/qa-dashboard", response_class=HTMLResponse)
+    def qa_dashboard_page(
+        request: Request,
+        db: DbConnection,
+        status: str | None = None,
+        priority: str | None = None,
+        test_type: str | None = None,
+        requirement_id: str | None = None,
+    ) -> HTMLResponse:
+        data = get_qa_dashboard_data(
+            db,
+            status=status,
+            priority=priority,
+            test_type=test_type,
+            requirement_id=requirement_id,
+        )
+        return templates.TemplateResponse(
+            request,
+            "qa_dashboard.html",
+            {
+                "summary": data["summary"],
+                "defect_cases": data["defect_cases"],
+                "regression_cases": data["regression_cases"],
+                "test_cases": data["test_cases"],
+                "active_status": status or "",
+                "active_priority": priority or "",
+                "active_test_type": test_type or "",
+                "active_requirement_id": requirement_id or "",
+                "provider_health": _provider_health_view_model(),
+            },
+        )
+
+
+
 
     @api.get("/api/ai-providers")
     def ai_providers() -> dict[str, dict[str, dict[str, object]]]:

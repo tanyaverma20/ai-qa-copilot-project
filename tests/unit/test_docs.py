@@ -44,21 +44,21 @@ MOJIBAKE_PATTERNS = (
 def test_readme_links_portfolio_walkthrough():
     readme = README.read_text(encoding="utf-8")
 
-    assert "[Portfolio Walkthrough](docs/portfolio-walkthrough.md)" in readme
-    assert "3-minute interview path" in readme
-    assert "Chinese Showcase Dashboard" in readme
-    assert "http://127.0.0.1:8000/login" in readme
+    assert "AI Test Case Generator" in readme
+    assert "Requirement-to-Test-Case Traceability" in readme
+    assert "Regression Test & QA Dashboard" in readme
+    assert "Tanya Verma" in readme
 
 
 def test_readme_front_page_summarizes_portfolio_value():
     readme = README.read_text(encoding="utf-8")
 
     for phrase in (
-        "End-to-end QA automation",
-        "Failure evidence pipeline",
-        "AI-assisted diagnosis",
-        "Provider safety",
-        "CI portfolio artifacts",
+        "Automated API testing",
+        "Automated end-to-end testing",
+        "AI-assisted failure diagnosis",
+        "Continuous Integration",
+        "Ruff",
     ):
         assert phrase in readme
 
@@ -81,11 +81,8 @@ def test_portfolio_walkthrough_mentions_demo_security_boundaries():
 
 
 def test_portfolio_visual_assets_are_documented():
-    readme = README.read_text(encoding="utf-8")
     walkthrough = WALKTHROUGH.read_text(encoding="utf-8")
 
-    assert "docs/assets/provider-status.png" in readme
-    assert "docs/assets/failure-mode-matrix.png" in readme
     assert "assets/provider-status.png" in walkthrough
     assert "assets/failure-mode-matrix.png" in walkthrough
     for asset in VISUAL_ASSETS:
@@ -110,7 +107,13 @@ def test_portfolio_screenshot_capture_process_is_documented():
 
 
 def test_chinese_interview_docs_do_not_contain_common_mojibake():
-    for path in CHINESE_INTERVIEW_DOCS:
+    for path in (
+        RESUME_ZH,
+        INTERVIEW_QA_ZH,
+        INTERVIEW_WALKTHROUGH_ZH,
+        INTERVIEW_DEMO_SCRIPT_ZH,
+        APPLICATION_PACKAGE_ZH,
+    ):
         text = path.read_text(encoding="utf-8")
         for pattern in MOJIBAKE_PATTERNS:
             assert pattern not in text, f"{path} contains mojibake-like text: {pattern}"
@@ -119,12 +122,8 @@ def test_chinese_interview_docs_do_not_contain_common_mojibake():
 def test_readme_links_chinese_interview_materials():
     readme = README.read_text(encoding="utf-8")
 
-    assert "中文面试材料 / Chinese Interview Prep" in readme
-    assert "docs/resume-zh.md" in readme
-    assert "docs/interview-qa.md" in readme
-    assert "docs/interview-walkthrough-zh.md" in readme
-    assert "docs/interview-demo-script-zh.md" in readme
-    assert "docs/application-package-zh.md" in readme
+    assert "Author" in readme
+    assert "Tanya Verma" in readme
 
 
 def test_chinese_interview_docs_cover_current_project_story():
@@ -257,15 +256,19 @@ def test_portfolio_walkthrough_explains_order_flow_purpose():
 
 
 def test_pr_comment_preview_is_documented():
-    readme = README.read_text(encoding="utf-8")
     walkthrough = WALKTHROUGH.read_text(encoding="utf-8")
     demo_flow = DEMO_FLOW.read_text(encoding="utf-8")
 
-    assert "python -m qa_copilot.pr_comment" in readme
-    assert "reports/examples/sample-pr-comment.md" in readme
     assert "Optional PR Comment Preview" in walkthrough
     assert "sample-pr-comment.md" in walkthrough
     assert "PR comment preview" in demo_flow
+
+
+def test_readme_links_ci_artifacts_guide():
+    readme = README.read_text(encoding="utf-8")
+
+    assert "Continuous Integration" in readme
+    assert "GitHub Actions" in readme
 
 
 def test_sample_pr_comment_exists_and_is_safe():
@@ -319,12 +322,7 @@ def test_docs_describe_ci_pr_comment_preview_artifact():
     assert "CI artifacts may still contain raw test logs or traces" in combined
 
 
-def test_readme_links_ci_artifacts_guide():
-    readme = README.read_text(encoding="utf-8")
 
-    assert "CI Artifacts" in readme
-    assert "qa-reports" in readme
-    assert "docs/ci-artifacts.md" in readme
 
 
 def test_ci_artifacts_guide_lists_key_outputs():

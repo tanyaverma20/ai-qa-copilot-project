@@ -26,13 +26,41 @@ CREATE TABLE IF NOT EXISTS orders (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(product_id) REFERENCES products(id)
 );
+
+CREATE TABLE IF NOT EXISTS traceability_requirements (
+  requirement_id TEXT PRIMARY KEY,
+  user_story TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS traceability_test_cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  requirement_id TEXT NOT NULL,
+  test_case_id TEXT NOT NULL,
+  scenario TEXT NOT NULL,
+  test_type TEXT NOT NULL,
+  priority TEXT NOT NULL,
+  preconditions_json TEXT NOT NULL DEFAULT '[]',
+  test_steps_json TEXT NOT NULL DEFAULT '[]',
+  expected_result TEXT NOT NULL,
+  execution_status TEXT NOT NULL DEFAULT 'Not Run',
+  actual_result TEXT NOT NULL DEFAULT '',
+  defect_reference TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(requirement_id, test_case_id),
+  FOREIGN KEY(requirement_id) REFERENCES traceability_requirements(requirement_id) ON DELETE CASCADE
+);
 """
 
 
 def connect(db_path: str | Path) -> sqlite3.Connection:
     connection = sqlite3.connect(str(db_path), check_same_thread=False)
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON;")
     return connection
+
 
 
 def initialize_database(connection: sqlite3.Connection) -> None:

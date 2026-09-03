@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>需求与测试用例追溯矩阵 - AI QA Copilot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">AI QA Copilot</a>
+      <nav class="topbar-nav" aria-label="主导航">
+        <a href="/">Dashboard</a>
+        <a href="/test-case-generator">Test Case Generator</a>
+        <a href="/traceability" aria-current="page">Traceability</a>
+        <a href="/qa-dashboard">QA Dashboard</a>
+        <a href="/login">Demo Shop</a>
+      </nav>
+    </header>
+
+    <main class="dashboard-shell">
+      <section class="dashboard-hero" aria-labelledby="traceability-title">
+        <div class="dashboard-hero-copy">
+          <h1 id="traceability-title">需求与测试用例追溯矩阵 (Traceability Matrix)</h1>
+          <p>
+            双向建立软件需求 / User Story 到生成的 AI 测试用例链路，
+            实时跟踪测试执行状态 (Passed / Failed / Blocked / Retest / Not Run)、实际结果与缺陷关联。
+          </p>
+        </div>
+        <aside class="hero-summary" aria-label="追溯矩阵概览">
+          <div>
+            <span>需求总数</span>
+            <strong id="stat-reqs">{{ summary.total_requirements }}</strong>
+          </div>
+          <div>
+            <span>用例总数</span>
+            <strong id="stat-tcs">{{ summary.total_test_cases }}</strong>
+          </div>
+          <div>
+            <span>通过 (Passed)</span>
+            <strong id="stat-passed" style="color: #38a169;">{{ summary.passed }}</strong>
+          </div>
+          <div>
+            <span>失败 (Failed)</span>
+            <strong id="stat-failed" style="color: #e53e3e;">{{ summary.failed }}</strong>
+          </div>
+        </aside>
+      </section>
+
+      <section class="dashboard-section">
+        <div class="section-heading">
+          <h2>需求追溯明细</h2>
+          <p>下方列表展示各需求绑定的测试用例，可直接更新执行状态、实际结果及缺陷编号。</p>
+        </div>
+
+        {% if not records %}
+          <div class="panel" style="text-align: center; padding: 3rem 1rem;">
+            <p style="color: #718096; font-size: 1.1rem;">暂无已保存的需求追溯记录。</p>
+            <a href="/test-case-generator" class="button-link" style="margin-top: 1rem; display: inline-block;">去生成并保存测试用例</a>
+          </div>
+        {% else %}
+          {% for req in records %}
+            <article class="panel" style="margin-bottom: 2rem; border-top: 4px solid #3182ce;">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                  <span style="background: #ebf8ff; color: #2b6cb0; font-weight: 700; padding: 4px 10px; border-radius: 4px; font-size: 0.9rem;">{{ req.requirement_id }}</span>
+                  <h3 style="margin-top: 0.5rem; font-size: 1.15rem;">User Story / 需求描述:</h3>
+                  <p style="color: #4a5568; background: #f7fafc; padding: 0.75rem; border-radius: 4px; font-size: 0.95rem; margin-top: 0.25rem;">{{ req.user_story }}</p>
+                </div>
+                <span style="color: #a0aec0; font-size: 0.85rem;">关联用例数: {{ req.test_cases | length }}</span>
+              </div>
+
+              <div class="matrix-scroll">
+                <table class="matrix-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 90px;">用例 ID</th>
+                      <th style="width: 200px;">测试场景</th>
+                      <th style="width: 100px;">类型 / 优先级</th>
+                      <th style="width: 140px;">执行状态</th>
+                      <th style="width: 200px;">实际结果</th>
+                      <th style="width: 140px;">缺陷/Issue 编号</th>
+                      <th style="width: 80px;">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for tc in req.test_cases %}
+                      <tr id="tr-{{ req.requirement_id }}-{{ tc.test_case_id }}">
+                        <td><strong>{{ tc.test_case_id }}</strong></td>
+                        <td>
+                          <div><strong>{{ tc.scenario }}</strong></div>
+                          <div style="font-size: 0.8rem; color: #718096; margin-top: 4px;">预期: {{ tc.expected_result }}</div>
+                        </td>
+                        <td>
+                          <div style="font-size: 0.8rem; margin-bottom: 2px;"><span style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">{{ tc.test_type }}</span></div>
+                          <div style="font-size: 0.8rem;"><span style="background: #edf2f7; color: #4a5568; padding: 2px 6px; border-radius: 4px;">{{ tc.priority }}</span></div>
+                        </td>
+                        <td>
+                          <select id="status-{{ req.requirement_id }}-{{ tc.test_case_id }}" style="padding: 0.4rem; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 0.85rem; width: 100%;">
+                            <option value="Not Run" {% if tc.execution_status == 'Not Run' %}selected{% endif %}>Not Run</option>
+                            <option value="Passed" {% if tc.execution_status == 'Passed' %}selected{% endif %}>Passed</option>
+                            <option value="Failed" {% if tc.execution_status == 'Failed' %}selected{% endif %}>Failed</option>
+                            <option value="Blocked" {% if tc.execution_status == 'Blocked' %}selected{% endif %}>Blocked</option>
+                            <option value="Retest" {% if tc.execution_status == 'Retest' %}selected{% endif %}>Retest</option>
+                          </select>
+                        </td>
+                        <td>
+                          <input type="text" id="actual-{{ req.requirement_id }}-{{ tc.test_case_id }}" value="{{ tc.actual_result }}" placeholder="输入实际测试结果..." style="width: 100%; padding: 0.4rem; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+                        </td>
+                        <td>
+                          <input type="text" id="defect-{{ req.requirement_id }}-{{ tc.test_case_id }}" value="{{ tc.defect_reference }}" placeholder="例如 DEFECT-101" style="width: 100%; padding: 0.4rem; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 0.85rem;">
+                        </td>
+                        <td>
+                          <button type="button" class="button-link button-link-secondary" onclick="updateTestCase('{{ req.requirement_id }}', '{{ tc.test_case_id }}')" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">保存</button>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          {% endfor %}
+        {% endif %}
+      </section>
+    </main>
+
+    <script>
+      async function updateTestCase(reqId, tcId) {
+        const statusVal = document.getElementById(`status-${reqId}-${tcId}`).value;
+        const actualVal = document.getElementById(`actual-${reqId}-${tcId}`).value;
+        const defectVal = document.getElementById(`defect-${reqId}-${tcId}`).value;
+
+        try {
+          const resp = await fetch(`/api/traceability/${encodeURIComponent(reqId)}/test-cases/${encodeURIComponent(tcId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              execution_status: statusVal,
+              actual_result: actualVal,
+              defect_reference: defectVal
+            })
+          });
+
+          if (!resp.ok) {
+            const errData = await resp.json();
+            alert('更新失败: ' + (errData.detail || errData.error || '未知错误'));
+            return;
+          }
+
+          alert(`测试用例 ${tcId} 更新成功！`);
+          window.location.reload();
+        } catch (err) {
+          alert('网络错误: ' + err.message);
+        }
+      }
+    </script>
+  </body>
+</html>
